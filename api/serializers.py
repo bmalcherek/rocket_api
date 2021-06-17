@@ -36,3 +36,9 @@ class TokenSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Token
         fields = '__all__'
+
+
+class DecomissionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Decomission
+        fields = '__all__'

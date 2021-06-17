@@ -3,7 +3,7 @@ import uuid
 import random
 
 from django.db.models.deletion import ProtectedError
-from django.db import transaction
+from django.db import transaction, DatabaseError
 from django.http.response import HttpResponse, JsonResponse
 
 from django.shortcuts import render
@@ -51,7 +51,7 @@ class StandardResultsSetPagination(PageNumberPagination):
 def check_precondition(request, model) -> HttpResponse:
     e = request.headers['If-Match'] if 'If-Match' in request.headers.keys() else None
     if not e:
-        return HttpResponse(status=status.HTTP_403_FORBIDDEN)
+        return HttpResponse(status=status.HTTP_428_PRECONDITION_REQUIRED)
 
     if not model:
         return HttpResponse(status=status.HTTP_404_NOT_FOUND)
@@ -225,7 +225,7 @@ class LaunchList(generics.GenericAPIView, mixins.ListModelMixin, mixins.CreateMo
             return JsonResponse({"error": "Token is not present"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
         t = models.Token.objects.filter(token=token).first()
         if not t:
-            return JsonResponse({"error": "Invalid Token"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+            return JsonResponse({"error": "Invalid Token"}, status=status.HTTP_403_FORBIDDEN)
 
         serializer = serializers.LaunchSerializer(data=request.data)
         if serializer.is_valid():
@@ -292,3 +292,32 @@ class TokenList(generics.GenericAPIView, mixins.CreateModelMixin):
         t = models.Token.objects.create(token=uuid.uuid4())
         s = serializers.TokenSerializer(t)
         return JsonResponse(s.data, status=status.HTTP_201_CREATED)
+
+
+class DecomissionList(generics.GenericAPIView, mixins.ListModelMixin, mixins.CreateModelMixin):
+    queryset = models.Decomission.objects.all()
+    serializer_class = serializers.DecomissionSerializer
+    pagination_class = StandardResultsSetPagination
+    parser_classes = (MultiPartParser, )
+
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+
+        serializer = serializers.DecomissionSerializer(data=request.data)
+        if serializer.is_valid():
+            boosters = models.Booster.objects.filter(
+                model=request.data['model'],
+                expended=False
+            )
+
+            with transaction.atomic():
+                for booster in boosters:
+                    booster.expended = True
+                    booster.save()
+                serializer.save()
+
+            return JsonResponse(serializer.data, status=201)
+
+        return JsonResponse(serializer.errors, status=400)

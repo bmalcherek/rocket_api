@@ -2,6 +2,7 @@ import hashlib
 
 from django.db import models
 from django.core.validators import MinValueValidator
+from django.db.models.base import Model
 
 
 def get_hash(content) -> str:
@@ -94,3 +95,8 @@ class Launch(models.Model):
 
 class Token(models.Model):
     token = models.TextField(primary_key=True)
+
+
+class Decomission(models.Model):
+    date_created = models.DateTimeField(auto_now_add=True)
+    model = models.ForeignKey(RocketModel, on_delete=models.CASCADE)

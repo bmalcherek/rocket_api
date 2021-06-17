@@ -14,4 +14,5 @@ urlpatterns = [
     path('launches/', views.LaunchList.as_view()),
     path('launches/<int:pk>/', views.LaunchList.as_view()),
     path('token/', views.TokenList.as_view()),
+    path('decomissions/', views.DecomissionList.as_view()),
 ]
